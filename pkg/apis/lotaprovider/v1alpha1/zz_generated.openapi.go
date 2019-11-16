@@ -67,8 +67,37 @@ func schema_pkg_apis_lotaprovider_v1alpha1_LotaProviderSpec(ref common.Reference
 			SchemaProps: spec.SchemaProps{
 				Description: "LotaProviderSpec defines the desired state of LotaProvider",
 				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"schema": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/mcanevet/lota-operator/pkg/apis/lotaprovider/v1alpha1.terraformProviderAttribute"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name", "version", "schema"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/mcanevet/lota-operator/pkg/apis/lotaprovider/v1alpha1.terraformProviderAttribute"},
 	}
 }
 
@@ -78,6 +107,22 @@ func schema_pkg_apis_lotaprovider_v1alpha1_LotaProviderStatus(ref common.Referen
 			SchemaProps: spec.SchemaProps{
 				Description: "LotaProviderStatus defines the observed state of LotaProvider",
 				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"reources": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"reources"},
 			},
 		},
 	}

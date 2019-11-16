@@ -7,20 +7,23 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type terraformProviderAttribute struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 // LotaProviderSpec defines the desired state of LotaProvider
 // +k8s:openapi-gen=true
 type LotaProviderSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	Name    string                       `json:"name"`
+	Version string                       `json:"version"`
+	Schema  []terraformProviderAttribute `json:"schema"`
 }
 
 // LotaProviderStatus defines the observed state of LotaProvider
 // +k8s:openapi-gen=true
 type LotaProviderStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	Resources []string `json:"reources"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

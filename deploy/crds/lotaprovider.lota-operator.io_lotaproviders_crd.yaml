@@ -30,9 +30,37 @@ spec:
           type: object
         spec:
           description: LotaProviderSpec defines the desired state of LotaProvider
+          properties:
+            name:
+              type: string
+            schema:
+              items:
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: string
+                required:
+                - name
+                - value
+                type: object
+              type: array
+            version:
+              type: string
+          required:
+          - name
+          - schema
+          - version
           type: object
         status:
           description: LotaProviderStatus defines the observed state of LotaProvider
+          properties:
+            reources:
+              items:
+                type: string
+              type: array
+          required:
+          - reources
           type: object
       type: object
   version: v1alpha1
