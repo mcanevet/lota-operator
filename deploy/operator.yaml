@@ -16,7 +16,7 @@ spec:
       containers:
         - name: lota-operator
           # Replace this with the built image name
-          image: REPLACE_IMAGE
+          image: docker.io/mcanevet/lota-operator
           command:
           - lota-operator
           imagePullPolicy: Always
