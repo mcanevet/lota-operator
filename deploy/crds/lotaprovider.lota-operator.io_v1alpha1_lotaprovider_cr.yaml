@@ -1,0 +1,7 @@
+apiVersion: lotaprovider.lota-operator.io/v1alpha1
+kind: LotaProvider
+metadata:
+  name: example-lotaprovider
+spec:
+  # Add fields here
+  size: 3
