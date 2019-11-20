@@ -1,0 +1,45 @@
+---
+version: '3'
+services:
+  server:
+    image: rancher/k3s:v1.0.0
+    command: server --disable-agent
+    environment:
+      - K3S_CLUSTER_SECRET=somethingtotallyrandom
+      - K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml
+      - K3S_KUBECONFIG_MODE=666
+    volumes:
+      - k3s-server:/var/lib/rancher/k3s
+      # This is just so that we get the kubeconfig file out
+      - .:/output
+    ports:
+      - 6443:6443
+
+  node:
+    image: rancher/k3s:v1.0.0
+    tmpfs:
+      - /run
+      - /var/run
+    privileged: true
+    environment:
+      - K3S_URL=https://server:6443
+      - K3S_CLUSTER_SECRET=somethingtotallyrandom
+
+  postgres:
+    image: postgres:12
+    environment:
+      POSTGRES_PASSWORD: mypassword
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: mypassword
+    volumes:
+      - mysqldata:/var/lib/mysql
+
+volumes:
+  k3s-server: {}
+  pgdata: {}
+  mysqldata: {}
