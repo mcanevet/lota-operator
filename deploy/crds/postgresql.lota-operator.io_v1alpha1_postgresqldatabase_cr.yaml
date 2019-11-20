@@ -1,0 +1,7 @@
+apiVersion: postgresql.lota-operator.io/v1-3-0-alpha1
+kind: PostgresqlDatabase
+metadata:
+  name: lota
+spec:
+  name: lota
+  provider: postgresql-1
