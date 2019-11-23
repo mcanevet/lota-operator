@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	lotaproviderv1alpha1 "github.com/mcanevet/lota-operator/pkg/apis/lotaprovider/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -97,9 +96,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner LotaProvider
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+	// Watch for changes to secondary resource CustomResourceDefinition and requeue the owner LotaProvider
+	err = c.Watch(&source.Kind{Type: &apiextensionsv1beta1.CustomResourceDefinition{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &lotaproviderv1alpha1.LotaProvider{},
 	})
