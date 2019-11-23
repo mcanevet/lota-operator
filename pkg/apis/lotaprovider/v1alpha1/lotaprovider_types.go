@@ -23,7 +23,7 @@ type LotaProviderSpec struct {
 // LotaProviderStatus defines the observed state of LotaProvider
 // +k8s:openapi-gen=true
 type LotaProviderStatus struct {
-	Resources []string `json:"reources"`
+	Resources []string `json:"resources"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
