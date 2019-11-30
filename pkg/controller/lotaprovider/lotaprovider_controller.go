@@ -15,7 +15,10 @@ import (
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,6 +64,12 @@ type block struct {
 	BlockTypes map[string]interface{} `json:"block_types,omitempty"`
 }
 
+// LotaController hold the controller instance and method for a LotaProvider
+type LotaController struct {
+	Controller controller.Controller
+	Client     dynamic.Interface
+}
+
 // from command/jsonprovider/attribute.go
 type attribute struct {
 	AttributeType json.RawMessage `json:"type,omitempty"`
@@ -74,7 +83,11 @@ type attribute struct {
 // Add creates a new LotaProvider Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+	client, err := dynamic.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+	return add(mgr, newReconciler(mgr), client)
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -83,26 +96,44 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
+func add(mgr manager.Manager, r reconcile.Reconciler, client dynamic.Interface) error {
 	// Create a new controller
 	c, err := controller.New("lotaprovider-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
+	myController := &LotaController{
+		Controller: c,
+		Client:     client,
+	}
+
 	// Watch for changes to primary resource LotaProvider
-	err = c.Watch(&source.Kind{Type: &lotaproviderv1alpha1.LotaProvider{}}, &handler.EnqueueRequestForObject{})
+	err = myController.Controller.Watch(&source.Kind{Type: &lotaproviderv1alpha1.LotaProvider{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
 
 	// Watch for changes to secondary resource CustomResourceDefinition and requeue the owner LotaProvider
-	err = c.Watch(&source.Kind{Type: &apiextensionsv1beta1.CustomResourceDefinition{}}, &handler.EnqueueRequestForOwner{
+	err = myController.Controller.Watch(&source.Kind{Type: &apiextensionsv1beta1.CustomResourceDefinition{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &lotaproviderv1alpha1.LotaProvider{},
 	})
 	if err != nil {
 		return err
+	}
+
+	// Watch for changes to GVKs relevant for LotaProvider
+	gvks := []schema.GroupVersionKind{
+		{Group: "lota-provider.io", Version: "", Kind: ""},
+	}
+	for _, gvk := range gvks {
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(gvk)
+		myController.Controller.Watch(&source.Kind{Type: u}, &handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &lotaproviderv1alpha1.LotaProvider{},
+		})
 	}
 
 	return nil
