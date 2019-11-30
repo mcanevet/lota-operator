@@ -23,8 +23,7 @@ An Operator that watches the `LotaProvider` resources to create a `CRD` per reso
 Status
 ------
 
-For now this is just an ugly Proof Of Concept written in Shell script.
-`CRD` creation works, but I couldn't get the resources created using this CRDs watched by the operator yet.
+For now this is just an ugly Proof Of Concept. `CRD` creation works, but I couldn't get the resources created using this CRDs watched by the operator yet.
 
 Example
 -------
