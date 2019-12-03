@@ -93,6 +93,43 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileLotaProvider{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
+// CRDWatcherMapper creates a EventHandler interface to map CustomResourceDefinition objects back to
+// controller and add given GVK to watch list.
+type CRDWatcherMapper struct {
+	controller *LotaController
+}
+
+// Map requests directed to CRD objects and extract related GVK to trigger another watch on
+// controller instance.
+func (c *CRDWatcherMapper) Map(obj handler.MapObject) []reconcile.Request {
+	// use c.controller to add a watch to the new CRD that obj refers to. Use dynamic client!
+	mapperLogger := log.WithValues(
+		"Object.Namespace", obj.Meta.GetNamespace(),
+		"Object.Name", obj.Meta.GetName(),
+	)
+	mapperLogger.Info("Call Map")
+	c.controller.Controller.Watch(&source.Kind{Type: obj.Object.GetObjectKind()}, NewCreateWatchEventHandler(c.controller))
+
+	return []reconcile.Request{}
+}
+
+// NewCreateWatchEventHandler creates a new instance of handler.EventHandler interface with
+// CRDWatcherMapper as map-func.
+func NewCreateWatchEventHandler(controller *LotaController) handler.EventHandler {
+	return &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: &CRDWatcherMapper{controller: controller},
+	}
+}
+
+func (s *LotaController) addCRDWatch() error {
+	err := s.Controller.Watch(&source.Kind{Type: &apiextensionsv1beta1.CustomResourceDefinition{}}, NewCreateWatchEventHandler(s))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, client dynamic.Interface) error {
 	// Create a new controller
@@ -112,11 +149,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler, client dynamic.Interface) 
 		return err
 	}
 
-	// Watch for changes to secondary resource CustomResourceDefinition and requeue the owner LotaProvider
-	err = myController.Controller.Watch(&source.Kind{Type: &apiextensionsv1beta1.CustomResourceDefinition{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &lotaproviderv1alpha1.LotaProvider{},
-	})
+	// Watch for changes to GVKs relevant for LotaProvider
+	err = myController.addCRDWatch()
 	if err != nil {
 		return err
 	}
