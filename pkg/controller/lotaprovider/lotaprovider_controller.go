@@ -64,8 +64,9 @@ type block struct {
 
 // LotaController hold the controller instance and method for a LotaProvider
 type LotaController struct {
-	Controller controller.Controller
-	Client     dynamic.Interface
+	Controller      controller.Controller
+	Client          dynamic.Interface
+	watchingObjects map[string]bool
 }
 
 // from command/jsonprovider/attribute.go
@@ -108,7 +109,16 @@ func (c *CRDWatcherMapper) Map(obj handler.MapObject) []reconcile.Request {
 		"Object.Name", obj.Meta.GetName(),
 	)
 	mapperLogger.Info("Call Map")
-	c.controller.Controller.Watch(&source.Kind{Type: obj.Object.GetObjectKind()}, NewCreateWatchEventHandler(c.controller))
+	if strings.HasSuffix(obj.Meta.GetName(), ".lota-operator.io") && !strings.HasSuffix(obj.Meta.GetName(), "lotaprovider.lota-operator.io") {
+		if _, exists := c.controller.watchingObjects[obj.Meta.GetName()]; exists {
+			mapperLogger.Info("Skip Watching: Already under watch")
+		} else {
+			c.controller.Controller.Watch(&source.Kind{Type: obj.Object}, NewCreateWatchEventHandler(c.controller))
+			c.controller.watchingObjects[obj.Meta.GetName()] = true
+		}
+	} else {
+		mapperLogger.Info("Skip Watching: Not a lota resource")
+	}
 
 	return []reconcile.Request{}
 }
@@ -121,15 +131,6 @@ func NewCreateWatchEventHandler(controller *LotaController) handler.EventHandler
 	}
 }
 
-func (s *LotaController) addCRDWatch() error {
-	err := s.Controller.Watch(&source.Kind{Type: &apiextensionsv1beta1.CustomResourceDefinition{}}, NewCreateWatchEventHandler(s))
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, client dynamic.Interface) error {
 	// Create a new controller
@@ -139,18 +140,25 @@ func add(mgr manager.Manager, r reconcile.Reconciler, client dynamic.Interface) 
 	}
 
 	myController := &LotaController{
-		Controller: c,
-		Client:     client,
+		Controller:      c,
+		Client:          client,
+		watchingObjects: make(map[string]bool),
 	}
 
 	// Watch for changes to primary resource LotaProvider
-	err = myController.Controller.Watch(&source.Kind{Type: &lotaproviderv1alpha1.LotaProvider{}}, &handler.EnqueueRequestForObject{})
+	err = myController.Controller.Watch(
+		&source.Kind{Type: &lotaproviderv1alpha1.LotaProvider{}},
+		&handler.EnqueueRequestForObject{},
+	)
 	if err != nil {
 		return err
 	}
 
 	// Watch for changes to GVKs relevant for LotaProvider
-	err = myController.addCRDWatch()
+	err = myController.Controller.Watch(
+		&source.Kind{Type: &apiextensionsv1beta1.CustomResourceDefinition{}},
+		NewCreateWatchEventHandler(myController),
+	)
 	if err != nil {
 		return err
 	}
