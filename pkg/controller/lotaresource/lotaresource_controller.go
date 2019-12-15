@@ -43,24 +43,37 @@ func newReconciler(mgr manager.Manager, client dynamic.Interface) reconcile.Reco
 	}
 }
 
+func newLotaResourceController(
+	mgr manager.Manager,
+	options controller.Options,
+	client dynamic.Interface,
+) (*Controller, error) {
+	// Create a new controller
+	c, err := controller.New("lotaresource-controller", mgr, options)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Controller{
+		Controller:      c,
+		Client:          client,
+		watchingObjects: make(map[string]bool),
+	}, nil
+}
+
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, client dynamic.Interface) error {
-	// Create a new controller
-	c, err := controller.New("lotaresource-controller", mgr, controller.Options{Reconciler: r})
+	opts := controller.Options{Reconciler: r}
+	// Create a new LotaResource controller
+	c, err := newLotaResourceController(mgr, opts, client)
 	if err != nil {
 		return err
 	}
 
-	s := &Controller{
-		Controller:      c,
-		Client:          client,
-		watchingObjects: make(map[string]bool),
-	}
-
 	// Watch for changes to primary resource CustomResourceDefinition
-	err = s.Controller.Watch(
+	err = c.Controller.Watch(
 		&source.Kind{Type: &apiextensionsv1beta1.CustomResourceDefinition{}},
-		NewCreateWatchEventHandler(s),
+		NewCreateWatchEventHandler(c),
 	)
 	if err != nil {
 		return err
@@ -83,17 +96,15 @@ func (c *CRDWatcherMapper) Map(obj handler.MapObject) []reconcile.Request {
 		"Object.Namespace", obj.Meta.GetNamespace(),
 		"Object.Name", obj.Meta.GetName(),
 	)
-	mapperLogger.Info("Mapping LotaResource")
 
 	if strings.HasSuffix(obj.Meta.GetName(), ".lota-operator.io") && !strings.HasSuffix(obj.Meta.GetName(), "lotaprovider.lota-operator.io") {
-		if _, exists := c.controller.watchingObjects[obj.Meta.GetName()]; exists {
-			mapperLogger.Info("Skip Watching: Already under watch")
-		} else {
+		if _, exists := c.controller.watchingObjects[obj.Meta.GetName()]; !exists {
+			mapperLogger.Info("Mapping LotaResource")
 			c.controller.Controller.Watch(&source.Kind{Type: obj.Object}, NewCreateWatchEventHandler(c.controller))
 			c.controller.watchingObjects[obj.Meta.GetName()] = true
+		} else {
+			mapperLogger.Info("Skip Watching: Already under watch")
 		}
-	} else {
-		mapperLogger.Info("Skip Watching: Not a lota resource")
 	}
 
 	return []reconcile.Request{}
