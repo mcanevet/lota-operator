@@ -31,14 +31,15 @@ func Add(mgr manager.Manager) error {
 	if err != nil {
 		return err
 	}
-	return add(mgr, newReconciler(mgr), client)
+	return add(mgr, newReconciler(mgr, client), client)
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, client dynamic.Interface) reconcile.Reconciler {
 	return &ReconcileLotaResource{
-		client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
+		client:    mgr.GetClient(),
+		dynClient: client,
+		scheme:    mgr.GetScheme(),
 	}
 }
 
@@ -113,8 +114,9 @@ var _ reconcile.Reconciler = &ReconcileLotaResource{}
 type ReconcileLotaResource struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client    client.Client
+	dynClient dynamic.Interface
+	scheme    *runtime.Scheme
 }
 
 // Reconcile reads that state of the cluster for a LotaResource object and makes changes based on the state read
