@@ -5,6 +5,7 @@ import (
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -97,17 +98,27 @@ func (c *CRDWatcherMapper) Map(obj handler.MapObject) []reconcile.Request {
 		"Object.Name", obj.Meta.GetName(),
 	)
 
-	if strings.HasSuffix(obj.Meta.GetName(), ".lota-operator.io") && !strings.HasSuffix(obj.Meta.GetName(), "lotaprovider.lota-operator.io") {
-		if _, exists := c.controller.watchingObjects[obj.Meta.GetName()]; !exists {
-			mapperLogger.Info("Mapping LotaResource")
-			c.controller.Controller.Watch(&source.Kind{Type: obj.Object}, NewCreateWatchEventHandler(c.controller))
-			c.controller.watchingObjects[obj.Meta.GetName()] = true
-		} else {
-			mapperLogger.Info("Skip Watching: Already under watch")
-		}
+	if !strings.HasSuffix(obj.Meta.GetName(), ".lota-operator.io") || strings.HasSuffix(obj.Meta.GetName(), "lotaprovider.lota-operator.io") {
+		return nil
 	}
 
-	return []reconcile.Request{}
+	if _, exists := c.controller.watchingObjects[obj.Meta.GetName()]; exists {
+		mapperLogger.Info("Skip Watching: Already under watch")
+		return nil
+	}
+
+	// saving object in cache
+	c.controller.watchingObjects[obj.Meta.GetName()] = true
+
+	mapperLogger.Info("Mapping LotaResource")
+	c.controller.Controller.Watch(&source.Kind{Type: obj.Object}, NewCreateWatchEventHandler(c.controller))
+
+	namespacedName := types.NamespacedName{
+		Namespace: obj.Meta.GetNamespace(),
+		Name:      obj.Meta.GetName(),
+	}
+
+	return append([]reconcile.Request{}, reconcile.Request{NamespacedName: namespacedName})
 }
 
 // NewCreateWatchEventHandler creates a new instance of handler.EventHandler interface with
