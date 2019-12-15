@@ -149,8 +149,6 @@ func (r *ReconcileLotaProvider) Reconcile(request reconcile.Request) (reconcile.
 	data := map[string]map[string]map[string]string{}
 	data["provider"] = provider
 
-	reqLogger.Info("DEBUG", "Terraform code to launch", data)
-
 	dir, err := ioutil.TempDir("/tmp", "lota-operator")
 	if err != nil {
 		return reconcile.Result{}, err
@@ -211,15 +209,11 @@ func (r *ReconcileLotaProvider) Reconcile(request reconcile.Request) (reconcile.
 	for k, v := range ps.Schemas[instance.Spec.Name].ResourceSchemas {
 		// Define a new CRD object
 		crd := newCRDForCR(instance, k, v.Block.Attributes)
-		reqLogger.Info("DEBUG", "CRD", crd)
-		reqLogger.Info("DEBUG", "CRD.Spec", crd.Spec)
 
 		// Set LotaProvider instance as the owner and controller
 		if err := controllerutil.SetControllerReference(instance, crd, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
-
-		reqLogger.Info("DEBUG", "Name", crd.Name, "Namespace", crd.Namespace)
 
 		// Check if this CRD already exists
 		found := &apiextensionsv1beta1.CustomResourceDefinition{}
