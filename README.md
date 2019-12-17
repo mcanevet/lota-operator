@@ -75,4 +75,11 @@ Create a LotaProvider Custom Resource:
 $ KUBECONFIG=./kubeconfig.yaml kubectl apply -f deploy/crds/lotaprovider.lota-operator.io_v1alpha1_lotaprovider_cr.yaml
 ```
 
-Tou should see the operator create new CRD for all resources managed by the Terraform Provider defined by the `LotaOperator` resource.
+You should see the operator create new CRD for all resources managed by the Terraform Provider defined by the `LotaOperator` resource.
+
+Create a Resource:
+
+```shell
+$ KUBECONFIG=./kubeconfig.yaml kubectl apply -f deploy/crds/postgresql.lota-operator.io_v1alpha1_postgresqldatabase_cr.yaml
+```
+This should create a PostgreSQL database using the Terraform provider.
